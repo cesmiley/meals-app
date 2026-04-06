@@ -11,6 +11,7 @@ from .recipe_import import import_recipe_from_url
 from .repository import (
     create_inventory_item,
     create_recipe,
+    delete_inventory_item,
     get_inventory_item,
     list_inventory,
     list_recipes,
@@ -70,6 +71,14 @@ def patch_inventory_item(item_id: int, payload: InventoryItemUpdate):
     if not updated:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     return updated
+
+
+@app.delete("/inventory/items/{item_id}")
+def remove_inventory_item(item_id: int):
+    deleted = delete_inventory_item(item_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    return {"deleted": True, "item_id": item_id}
 
 
 @app.post("/recipes", response_model=RecipeOut)

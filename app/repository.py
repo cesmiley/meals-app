@@ -78,6 +78,15 @@ def update_inventory_item(item_id: int, data: InventoryItemUpdate) -> dict | Non
     return get_inventory_item(item_id)
 
 
+def delete_inventory_item(item_id: int) -> bool:
+    with get_conn() as conn:
+        row = conn.execute("SELECT id FROM inventory_items WHERE id = ?", (item_id,)).fetchone()
+        if not row:
+            return False
+        conn.execute("DELETE FROM inventory_items WHERE id = ?", (item_id,))
+    return True
+
+
 def row_to_inventory_dict(row) -> dict:
     return {
         "id": row["id"],

@@ -51,6 +51,7 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT
 - `POST /inventory/items`
 - `GET /inventory/items?location=fridge&staples_only=true`
 - `PATCH /inventory/items/{item_id}`
+- `DELETE /inventory/items/{item_id}`
 - `POST /recipes`
 - `POST /recipes/inbox/import`
 - `GET /recipes?favorite=true&tags=under-30-mins`

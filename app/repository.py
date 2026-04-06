@@ -36,7 +36,7 @@ def create_inventory_item(data: InventoryItemCreate) -> dict:
             ),
         )
         item_id = cur.fetchone()["id"]
-        return get_inventory_item(item_id)
+    return get_inventory_item(item_id)
 
 
 def list_inventory(location: str | None = None, staples_only: bool = False) -> list[dict]:

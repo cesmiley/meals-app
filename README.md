@@ -47,6 +47,7 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
 ## Key Endpoints
+- `GET /` (web UI)
 - `POST /inventory/items`
 - `GET /inventory/items?location=fridge&staples_only=true`
 - `PATCH /inventory/items/{item_id}`
@@ -130,3 +131,11 @@ curl -X POST http://127.0.0.1:8000/plans/customize \
 - Quantity/unit normalization is lightweight; a production setup should add robust unit conversion.
 - The planner uses heuristics for cost/waste optimization and produces multiple scored options.
 - SQLite is for local development; production hosting should use Postgres (`DATABASE_URL`).
+
+## Web UI
+- Local: `http://127.0.0.1:8000/`
+- Render: `https://meal-planner-api-vgfz.onrender.com/`
+- Workflow:
+  1. Add inventory items (including staples and stock state).
+  2. Add/import recipes.
+  3. Use **Plan This Week** to generate options and grocery lists.

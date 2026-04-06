@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 
 from .database import init_db
 from .planner import customize_plan, generate_plan_options
@@ -28,6 +31,7 @@ from .schemas import (
 )
 
 app = FastAPI(title="Meal Planner API", version="0.1.0")
+UI_INDEX = Path(__file__).parent / "static" / "index.html"
 
 
 @app.on_event("startup")
@@ -38,6 +42,11 @@ def startup() -> None:
 @app.get("/health")
 def health() -> dict:
     return {"ok": True}
+
+
+@app.get("/", include_in_schema=False)
+def ui():
+    return FileResponse(UI_INDEX)
 
 
 @app.post("/inventory/items", response_model=InventoryItemOut)

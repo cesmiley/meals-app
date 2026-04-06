@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meal Planner</title>
+  <style>
+    :root {
+      --bg: #f4efe4;
+      --bg-alt: #ece4d2;
+      --ink: #1f2a1e;
+      --card: #fffaf0;
+      --line: #c9bfa8;
+      --accent: #2e6f40;
+      --accent-2: #b55f1d;
+      --danger: #8a2727;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 5% 0%, #fff9eb 0, #fff9eb 15%, transparent 40%),
+        radial-gradient(circle at 95% 10%, #f9ebcf 0, #f9ebcf 10%, transparent 35%),
+        linear-gradient(180deg, var(--bg), var(--bg-alt));
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+
+    .hero {
+      grid-column: 1 / -1;
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.8rem);
+      letter-spacing: 0.01em;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      max-width: 70ch;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 5px 0 #e0d4ba;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+
+    .inventory-panel { grid-column: span 6; }
+    .recipes-panel { grid-column: span 6; }
+    .planner-panel { grid-column: 1 / -1; }
+
+    form {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .row {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .row.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .row.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    label {
+      display: grid;
+      gap: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    input, select, textarea, button {
+      font: inherit;
+      border: 2px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    textarea { min-height: 92px; resize: vertical; }
+
+    button {
+      border-color: #234f2e;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    button:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+    button.secondary {
+      background: var(--accent-2);
+      border-color: #934f18;
+    }
+
+    .tiny { font-size: 0.8rem; opacity: 0.85; }
+    .list {
+      display: grid;
+      gap: 8px;
+      max-height: 280px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px;
+    }
+
+    .muted { opacity: 0.72; }
+
+    .status {
+      grid-column: 1 / -1;
+      min-height: 1.2rem;
+      font-weight: 700;
+    }
+
+    .status.err { color: var(--danger); }
+
+    .plan-option {
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fff;
+      margin-top: 10px;
+    }
+
+    .split {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 2px 8px;
+      font-size: 0.76rem;
+      margin-right: 4px;
+      margin-top: 4px;
+      background: #f8efdd;
+    }
+
+    @media (max-width: 980px) {
+      .inventory-panel, .recipes-panel, .planner-panel { grid-column: 1 / -1; }
+      .row, .row.two, .row.four, .split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <h1>Meal Planner</h1>
+      <p>Track pantry/fridge/freezer inventory, maintain recipe links, and generate a meal plan for this week with a grocery list based on what you already have.</p>
+    </section>
+
+    <section class="panel inventory-panel">
+      <h2>Inventory</h2>
+      <form id="inventory-form">
+        <div class="row">
+          <label>Name <input required name="name" placeholder="olive oil" /></label>
+          <label>Location
+            <select name="location">
+              <option value="pantry">pantry</option>
+              <option value="fridge">fridge</option>
+              <option value="freezer">freezer</option>
+            </select>
+          </label>
+          <label>Unit <input name="unit" placeholder="tbsp / lb / count" /></label>
+        </div>
+        <div class="row four">
+          <label>On Hand <input type="number" step="0.01" name="quantity_on_hand" value="0" /></label>
+          <label>Stock State
+            <select name="stock_state">
+              <option value="stocked">stocked</option>
+              <option value="low">low</option>
+              <option value="out">out</option>
+            </select>
+          </label>
+          <label>Staple Min Qty <input type="number" step="0.01" name="min_quantity" value="0" /></label>
+          <label class="tiny">Staple <input type="checkbox" name="is_staple" /></label>
+        </div>
+        <button type="submit">Add Inventory Item</button>
+      </form>
+      <div class="list" id="inventory-list"></div>
+    </section>
+
+    <section class="panel recipes-panel">
+      <h2>Recipes</h2>
+      <form id="recipe-import-form">
+        <div class="row two">
+          <label>Recipe URL <input name="url" placeholder="https://..." required /></label>
+          <div style="display:flex; align-items:end;"><button class="secondary" type="submit">Import From Link</button></div>
+        </div>
+      </form>
+      <form id="recipe-form">
+        <div class="row two">
+          <label>Title <input required name="title" placeholder="One Pan Pasta" /></label>
+          <label>Tags (comma separated) <input name="tags" placeholder="under-30-mins, one-pot" /></label>
+        </div>
+        <div class="row four">
+          <label>Servings <input type="number" name="servings" value="4" /></label>
+          <label>Minutes <input type="number" name="estimated_minutes" value="30" /></label>
+          <label class="tiny">Tried <input type="checkbox" name="tried" /></label>
+          <label class="tiny">Favorite <input type="checkbox" name="favorite" /></label>
+        </div>
+        <label>Ingredients (one per line: <span class="muted">qty unit item</span>)
+          <textarea name="ingredients" placeholder="2 lb chicken breast&#10;2 tbsp olive oil&#10;1 lemon"></textarea>
+        </label>
+        <button type="submit">Add Recipe</button>
+      </form>
+      <div class="list" id="recipe-list"></div>
+    </section>
+
+    <section class="panel planner-panel">
+      <h2>Plan This Week</h2>
+      <form id="plan-form">
+        <div class="row four">
+          <label>People <input type="number" min="1" name="people" value="2" /></label>
+          <label>Days <input type="number" min="1" max="31" name="days" value="7" /></label>
+          <label>Meals / Person / Day <input type="number" min="1" max="4" name="meals_per_person_per_day" value="2" /></label>
+          <label>Options <input type="number" min="1" max="5" name="options" value="3" /></label>
+        </div>
+        <div class="row two">
+          <label>Start Date <input type="date" name="start_date" /></label>
+          <label class="tiny">Include Leftovers <input type="checkbox" name="include_leftovers" checked /></label>
+        </div>
+        <button type="submit">Generate Meal Plan</button>
+      </form>
+      <div id="plan-results"></div>
+    </section>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const api = "";
+    const statusEl = document.getElementById("status");
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError ? "status err" : "status";
+    }
+
+    async function req(path, options = {}) {
+      const response = await fetch(api + path, {
+        headers: { "content-type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`${response.status}: ${text}`);
+      }
+      return response.json();
+    }
+
+    function parseIngredientLines(text) {
+      return text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const m = line.match(/^(\d+(?:\.\d+)?(?:\/\d+)?)\s+([A-Za-z]+)\s+(.+)$/);
+          if (!m) return { item_name: line };
+          const quantity = m[1].includes("/")
+            ? m[1].split("/").reduce((a, b, i) => (i === 0 ? Number(a) / Number(b) : a), 0)
+            : Number(m[1]);
+          return { item_name: m[3], quantity: Number.isFinite(quantity) ? quantity : null, unit: m[2] };
+        });
+    }
+
+    function mondayOfCurrentWeek() {
+      const d = new Date();
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1) - day;
+      d.setDate(d.getDate() + diff);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function renderInventory(items) {
+      const el = document.getElementById("inventory-list");
+      if (!items.length) {
+        el.innerHTML = '<div class="muted">No inventory items yet.</div>';
+        return;
+      }
+      el.innerHTML = items.map((item) => `
+        <div class="card">
+          <strong>${item.name}</strong> <span class="muted">(${item.location})</span><br>
+          ${item.quantity_on_hand} ${item.unit || ""} · ${item.stock_state}
+          ${item.is_staple ? '<span class="pill">staple</span>' : ""}
+        </div>
+      `).join("");
+    }
+
+    function renderRecipes(recipes) {
+      const el = document.getElementById("recipe-list");
+      if (!recipes.length) {
+        el.innerHTML = '<div class="muted">No recipes yet.</div>';
+        return;
+      }
+      el.innerHTML = recipes.map((recipe) => `
+        <div class="card">
+          <strong>${recipe.title}</strong><br>
+          <span class="muted">${recipe.servings || "?"} servings · ${recipe.estimated_minutes || "?"} mins</span>
+          <div>${(recipe.tags || []).map((t) => `<span class="pill">${t}</span>`).join("")}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderPlan(options) {
+      const el = document.getElementById("plan-results");
+      if (!options.length) {
+        el.innerHTML = '<div class="muted">No plan options generated. Add at least one recipe with ingredients.</div>';
+        return;
+      }
+
+      el.innerHTML = options.map((opt, idx) => `
+        <article class="plan-option">
+          <strong>Option ${idx + 1}</strong> <span class="pill">score ${opt.score}</span>
+          <div class="split">
+            <div>
+              <h3>Meals</h3>
+              ${opt.entries.map((e) => `<div class="card">${e.meal_date} #${e.meal_index + 1}: ${e.recipe_title || "Recipe #" + (e.recipe_id || "?")}</div>`).join("")}
+            </div>
+            <div>
+              <h3>Grocery List</h3>
+              ${opt.grocery_list.map((g) => `<div class="card">${g.item_name}: buy ${g.to_buy_quantity} ${g.unit || ""} <span class="muted">(${g.reason})</span></div>`).join("")}
+            </div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    async function refresh() {
+      const [inventory, recipes] = await Promise.all([
+        req("/inventory/items"),
+        req("/recipes"),
+      ]);
+      renderInventory(inventory);
+      renderRecipes(recipes);
+    }
+
+    document.getElementById("inventory-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const payload = {
+        name: form.get("name"),
+        location: form.get("location"),
+        quantity_on_hand: Number(form.get("quantity_on_hand") || 0),
+        unit: (form.get("unit") || "").trim() || null,
+        is_staple: form.get("is_staple") === "on",
+        stock_state: form.get("stock_state"),
+        min_quantity: Number(form.get("min_quantity") || 0),
+      };
+
+      try {
+        await req("/inventory/items", { method: "POST", body: JSON.stringify(payload) });
+        setStatus("Inventory item added.");
+        event.target.reset();
+        await refresh();
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("recipe-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const payload = {
+        title: form.get("title"),
+        tried: form.get("tried") === "on",
+        favorite: form.get("favorite") === "on",
+        servings: Number(form.get("servings") || 0) || null,
+        estimated_minutes: Number(form.get("estimated_minutes") || 0) || null,
+        tags: String(form.get("tags") || "").split(",").map((s) => s.trim()).filter(Boolean),
+        ingredients: parseIngredientLines(String(form.get("ingredients") || "")),
+      };
+
+      try {
+        await req("/recipes", { method: "POST", body: JSON.stringify(payload) });
+        setStatus("Recipe added.");
+        event.target.reset();
+        await refresh();
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("recipe-import-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const payload = { url: form.get("url") };
+
+      try {
+        await req("/recipes/inbox/import", { method: "POST", body: JSON.stringify(payload) });
+        setStatus("Recipe imported from link.");
+        event.target.reset();
+        await refresh();
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("plan-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const payload = {
+        people: Number(form.get("people")),
+        days: Number(form.get("days")),
+        meals_per_person_per_day: Number(form.get("meals_per_person_per_day")),
+        options: Number(form.get("options")),
+        start_date: form.get("start_date"),
+        include_leftovers: form.get("include_leftovers") === "on",
+      };
+
+      try {
+        const data = await req("/plans/generate", { method: "POST", body: JSON.stringify(payload) });
+        renderPlan(data.options || []);
+        setStatus("Meal plan generated.");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.querySelector('input[name="start_date"]').value = mondayOfCurrentWeek();
+    refresh().catch((err) => setStatus(err.message, true));
+  </script>
+</body>
+</html>

@@ -12,6 +12,56 @@ def normalize_name(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
 
 
+_QUALIFIER_STOPWORDS = {
+    "fresh", "dried", "frozen", "canned", "sliced", "diced", "chopped",
+    "minced", "ground", "whole", "large", "small", "medium", "organic",
+    "packages", "package", "cans", "can", "oz", "lb", "lbs", "g", "ml",
+    "creamy", "smooth", "chunky", "extra", "virgin", "light", "dark",
+    "low", "fat", "sodium", "reduced", "unsalted", "salted",
+}
+
+
+def _core_tokens(name: str) -> frozenset[str]:
+    """Strip parenthetical content, noise qualifiers, and digits; return remaining tokens."""
+    name = re.sub(r"\([^)]*\)", "", name)
+    return frozenset(
+        t for t in name.split()
+        if t not in _QUALIFIER_STOPWORDS and not t.isdigit() and len(t) > 2
+    )
+
+
+def resolve_inventory_key(query: str, mapping: dict) -> str | None:
+    """Return the best matching key in mapping for query using exact then fuzzy token match."""
+    if query in mapping:
+        return query
+    query_core = _core_tokens(query)
+    if not query_core:
+        return None
+    best_key: str | None = None
+    best_score = 0.0
+    for key in mapping:
+        key_core = _core_tokens(key)
+        if not key_core:
+            continue
+        shared = query_core & key_core
+        if not shared:
+            continue
+        if not (key_core <= query_core or query_core <= key_core):
+            continue
+        if not any(len(t) > 3 for t in shared):
+            continue
+        score = len(shared) / len(query_core | key_core)
+        if score > best_score:
+            best_score = score
+            best_key = key
+    return best_key
+
+
+def fuzzy_inventory_lookup(query: str, inventory_map: dict[str, list[dict]]) -> list[dict]:
+    key = resolve_inventory_key(query, inventory_map)
+    return inventory_map[key] if key is not None else []
+
+
 def create_inventory_item(data: InventoryItemCreate) -> dict:
     with get_conn() as conn:
         cur = conn.execute(

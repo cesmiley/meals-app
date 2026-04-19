@@ -5,7 +5,13 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from .repository import fetch_inventory_map, fetch_recipes_with_ingredients, staple_targets
+from .repository import (
+    fetch_inventory_map,
+    fetch_recipes_with_ingredients,
+    fuzzy_inventory_lookup,
+    resolve_inventory_key,
+    staple_targets,
+)
 
 
 @dataclass
@@ -116,10 +122,12 @@ def score_recipe(recipe: dict, people: int, inventory_map: dict[str, list[dict]]
         needed = float(ing.get("quantity") or 1.0)
         needed = needed * max(1.0, people / max(recipe.get("servings") or people, 1))
 
-        inv_items = inventory_map.get(ing["normalized_item_name"], [])
+        inv_items = fuzzy_inventory_lookup(ing["normalized_item_name"], inventory_map)
         on_hand = sum(float(i.get("quantity_on_hand") or 0) for i in inv_items)
         part = min(on_hand / needed, 1.0) if needed > 0 else 1.0
         coverage += part
+        if part < 1.0:
+            coverage -= 0.1 * (1.0 - part)
 
         for item in inv_items:
             if item.get("expires_on"):
@@ -159,15 +167,16 @@ def build_grocery_list(
     staples = staple_targets()
 
     for key, payload in needed.items():
-        inv_items = inventory_map.get(key, [])
+        inv_items = fuzzy_inventory_lookup(key, inventory_map)
         on_hand = sum(float(i.get("quantity_on_hand") or 0) for i in inv_items)
         to_buy = max(payload["needed"] - on_hand, 0)
 
-        is_staple = key in staples
+        staple_key = resolve_inventory_key(key, staples)
+        is_staple = staple_key is not None
         reason = "required for recipes"
 
         if is_staple:
-            min_qty = staples[key]["min_quantity"]
+            min_qty = staples[staple_key]["min_quantity"]
             projected = on_hand - payload["needed"]
             if projected < min_qty:
                 top_up = min_qty - projected

@@ -149,7 +149,7 @@ def build_grocery_list(
     inventory_map: dict[str, list[dict]],
 ) -> list[dict]:
     recipe_map = {r["id"]: r for r in recipes}
-    needed: dict[str, dict] = defaultdict(lambda: {"needed": 0.0, "unit": None, "name": None})
+    needed: dict[str, dict] = defaultdict(lambda: {"needed": 0.0, "unit": None, "name": None, "recipes": []})
 
     for entry in entries:
         if entry.is_leftover or entry.recipe_id is None:
@@ -162,6 +162,8 @@ def build_grocery_list(
             needed[key]["needed"] += (float(ing.get("quantity") or 1.0) * scale)
             needed[key]["unit"] = needed[key]["unit"] or ing.get("unit")
             needed[key]["name"] = needed[key]["name"] or ing.get("item_name")
+            if recipe["title"] not in needed[key]["recipes"]:
+                needed[key]["recipes"].append(recipe["title"])
 
     lines: list[dict] = []
     staples = staple_targets()
@@ -193,6 +195,7 @@ def build_grocery_list(
                     "to_buy_quantity": round(to_buy, 2),
                     "is_staple": is_staple,
                     "reason": reason,
+                    "recipes": payload["recipes"],
                 }
             )
 
@@ -210,6 +213,7 @@ def build_grocery_list(
                     "to_buy_quantity": round(staple["min_quantity"] - on_hand, 2),
                     "is_staple": True,
                     "reason": "staple below minimum",
+                    "recipes": [],
                 }
             )
 

@@ -365,12 +365,33 @@
               ${opt.entries.map((e) => `<div class="card">${e.meal_date} #${e.meal_index + 1}: ${e.recipe_title || "Recipe #" + (e.recipe_id || "?")}</div>`).join("")}
             </div>
             <div>
-              <h3>Grocery List</h3>
-              ${opt.grocery_list.map((g) => `<div class="card">${g.item_name}: buy ${g.to_buy_quantity} ${g.unit || ""} <span class="muted">(${g.reason})</span></div>`).join("")}
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <h3 style="margin:0;">Grocery List</h3>
+                <label style="font-size:0.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                  <input type="checkbox" class="grocery-filter" data-opt="${idx}"> Recipes only
+                </label>
+              </div>
+              <div class="grocery-items" data-opt="${idx}">
+                ${opt.grocery_list.map((g) => `
+                  <div class="card grocery-item ${g.recipes && g.recipes.length ? "has-recipe" : "staple-only"}" style="margin-bottom:6px;">
+                    <div>${g.item_name}: buy ${g.to_buy_quantity} ${g.unit || ""} <span class="muted">(${g.reason})</span></div>
+                    ${g.recipes && g.recipes.length ? `<div class="tiny" style="margin-top:3px;color:var(--accent);">for: ${g.recipes.join(" · ")}</div>` : ""}
+                  </div>
+                `).join("")}
+              </div>
             </div>
           </div>
         </article>
       `).join("");
+
+      el.querySelectorAll(".grocery-filter").forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+          const items = el.querySelectorAll(`.grocery-items[data-opt="${checkbox.dataset.opt}"] .grocery-item`);
+          items.forEach((item) => {
+            item.style.display = checkbox.checked && item.classList.contains("staple-only") ? "none" : "";
+          });
+        });
+      });
     }
 
     async function refresh() {

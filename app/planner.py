@@ -52,6 +52,7 @@ def build_option(request, recipes: list[dict], inventory_map: dict[str, list[dic
 
     entries: list[PlannedMeal] = []
     leftover_servings = 0
+    used_recipe_ids: set[int] = set()
 
     for slot in slots:
         d, meal_index = slot
@@ -70,11 +71,24 @@ def build_option(request, recipes: list[dict], inventory_map: dict[str, list[dic
             )
             continue
 
-        scored_recipes = [(score_recipe(r, request.people, inventory_map, rng), r) for r in recipes]
-        scored_recipes.sort(key=lambda x: x[0], reverse=True)
-        _, best = scored_recipes[0]
+        available = [r for r in recipes if r["id"] not in used_recipe_ids]
+        if not available:
+            used_recipe_ids.clear()
+            available = recipes
 
-        produced = max(request.people, int(best.get("servings") or request.people))
+        scored_recipes = [(score_recipe(r, request.people, inventory_map, rng), r) for r in available]
+        scored_recipes.sort(key=lambda x: x[0], reverse=True)
+
+        candidates = scored_recipes[:min(5, len(scored_recipes))]
+        raw_scores = [s for s, _ in candidates]
+        min_s = min(raw_scores)
+        weights = [s - min_s + 0.1 for s in raw_scores]
+        _, best = candidates[rng.choices(range(len(candidates)), weights=weights)[0]]
+
+        used_recipe_ids.add(best["id"])
+
+        raw_produced = int(best.get("servings") or request.people)
+        produced = min(max(request.people, raw_produced), request.people * 2)
         leftover_servings += max(0, produced - request.people)
 
         entries.append(
@@ -116,7 +130,7 @@ def score_recipe(recipe: dict, people: int, inventory_map: dict[str, list[dict]]
     base = coverage / max(len(ingredients), 1)
     favorite_bonus = 0.15 if recipe.get("favorite") else 0
     tried_bonus = 0.05 if recipe.get("tried") else 0
-    random_tie_break = rng.random() * 0.02
+    random_tie_break = rng.random() * 0.15
     return base + favorite_bonus + tried_bonus + random_tie_break
 
 
